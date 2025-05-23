@@ -2,9 +2,9 @@ name: Python Code Quality and Simple Deployment
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ] 
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   quality-checks:
