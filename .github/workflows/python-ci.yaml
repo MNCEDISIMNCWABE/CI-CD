@@ -1,18 +1,19 @@
-name: Python Code Quality and Simple Deployment
+name: Python Code Quality and Deployment Pipeline
 
 on:
   push:
-    branches: [ main, develop ] 
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   quality-checks:
+    name: Quality Checks (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
-
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -25,22 +26,30 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8 black mypy pytest
+        pip install -e .
 
-    - name: Run tests
+    - name: Run tests with pytest
       run: |
-        pytest tests/
+        pytest tests/ --cov=src --cov-report=xml
 
-    - name: Run quality checks
+    - name: Run flake8 linting
       run: |
         flake8 src/ tests/ --count --show-source --statistics --exclude=.git,__pycache__,*/__init__.py
+
+    - name: Run black formatting check
+      run: |
         black --check src/ tests/ --exclude='/(\.git|__pycache__)/'
+
+    - name: Run mypy type checking
+      run: |
         mypy src/ tests/ --ignore-missing-imports --exclude '/(\.git|__pycache__)/'
 
-  simple-deploy:
+  develop-deploy:
+    name: Deploy to Development Environment
     needs: quality-checks
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
-
+    if: github.ref == 'refs/heads/develop'
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -49,10 +58,36 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install calculator locally
+    - name: Install package
       run: |
         pip install .
-
-        echo "Calculator installed successfully!"
-        echo "Test usage:"
+        
+    - name: Verify deployment
+      run: |
+        echo "✅ Successfully deployed to DEVELOPMENT environment"
+        echo "Running smoke tests..."
         python -c "from calc.calculator import add, subtract; print(f'2+3={add(2,3)}, 5-2={subtract(5,2)}')"
+
+  production-deploy:
+    name: Deploy to Production Environment
+    needs: quality-checks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install package
+      run: |
+        pip install .
+        
+    - name: Verify production deployment
+      run: |
+        echo "🚀 PRODUCTION DEPLOYMENT SUCCESSFUL"
+        echo "Running production verification..."
+        python -c "from calc.calculator import add, subtract; print(f'PRODUCTION: 2+3={add(2,3)}, 5-2={subtract(5,2)}')"
