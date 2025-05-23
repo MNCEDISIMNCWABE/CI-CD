@@ -1,0 +1,37 @@
+name: Deploy BigQuery Scheduled Queries
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'sql/**/*.sql'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'sql/**/*.sql'
+
+jobs:
+  deploy-queries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up gcloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        project_id: hallowed-span-459710-s1
+
+    - name: Set up environment
+      run: |
+        sudo apt-get install -y jq
+        echo "SQL_DIR=$(pwd)/sql" >> $GITHUB_ENV
+
+    - name: Run deployment
+      run: |
+        chmod +x bash.sh
+        ./bash.sh
