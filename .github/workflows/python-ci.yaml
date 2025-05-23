@@ -39,7 +39,7 @@ jobs:
   simple-deploy:
     needs: quality-checks
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
 
     steps:
     - uses: actions/checkout@v4
