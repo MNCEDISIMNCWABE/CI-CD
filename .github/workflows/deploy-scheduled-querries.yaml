@@ -1,17 +1,67 @@
-name: Deploy BigQuery Scheduled Queries
+name: BigQuery SQL Quality and Deployment
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
       - 'sql/**/*.sql'
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
       - 'sql/**/*.sql'
 
 jobs:
+  sql-quality-checks:
+    name: SQL Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq python3-pip
+        pip3 install sqlfluff sql-formatter google-cloud-bigquery
+        
+    - name: SQLFluff linting
+      run: |
+        echo "Running SQL syntax validation..."
+        sqlfluff lint sql/ --dialect bigquery --exclude-rules L031,L032
+        
+    - name: SQL formatting check
+      run: |
+        echo "Checking SQL formatting..."
+        for file in sql/*.sql; do
+          formatted=$(sql-formatter --dialect bigquery "$file")
+          if ! diff <(echo "$formatted") "$file" >/dev/null; then
+            echo "::error::SQL file not properly formatted: $file"
+            echo "Run 'sql-formatter --dialect bigquery -i $file' to fix"
+            exit 1
+          fi
+        done
+        
+    - name: Basic query validation
+      run: |
+        echo "Running basic query validation..."
+        for file in sql/*.sql; do
+          echo "Validating $file"
+          # Check for required BigQuery elements
+          if ! grep -qi "CREATE OR REPLACE TABLE" "$file" && \
+             ! grep -qi "INSERT INTO" "$file"; then
+            echo "::error::Query must specify destination table (CREATE OR REPLACE TABLE or INSERT INTO)"
+            exit 1
+          fi
+          
+          # Check for potential SQL injection risks
+          if grep -i "EXECUTE IMMEDIATE" "$file" | grep -v "';'"; then
+            echo "::warning file=$file::Potential dynamic SQL risk detected"
+          fi
+        done
+
   deploy-queries:
+    name: Deploy Queries
+    needs: sql-quality-checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
