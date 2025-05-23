@@ -32,11 +32,12 @@ jobs:
           L031,L032,LT01,LT02,LT05,LT09,LT10,LT11,LT12,LT13 \
           --rules L001,L003,L004,L006,L007,L008,L010,L014,L017,L018,L019,L020,L021,L022,L023,L025,L026,L027,L028,L029,L030,L034,L036,L037,L038,L039,L040,L041,L042,L043,L044,L045,L046,L047,L048,L049,L050,L051,L052,L053,L054,L055,L056,L057,L058,L059,L060
         
-    - name: Basic query validation
+    - name: Query validation
       run: |
         echo "Running structural validation..."
         for file in sql/*.sql; do
           echo "Validating $file"
+          
           # Check for required BigQuery elements
           if ! grep -qi "CREATE OR REPLACE TABLE" "$file" && \
              ! grep -qi "INSERT INTO" "$file"; then
@@ -50,8 +51,8 @@ jobs:
             exit 1
           fi
           
-          # Verify table references use backticks
-          if grep -i "FROM " "$file" | grep -vE "FROM\s+`"; then
+          # Verify table references use backticks (fixed syntax)
+          if grep -i "FROM " "$file" | grep -vE 'FROM[[:space:]]+`'; then
             echo "::warning file=$file::Table references should use backticks for BigQuery"
           fi
         done
