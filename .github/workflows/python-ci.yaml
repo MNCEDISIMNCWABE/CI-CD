@@ -32,9 +32,9 @@ jobs:
 
     - name: Run quality checks
       run: |
-        flake8 calc/ tests/ --count --show-source --statistics --exclude=.git,__pycache__,*/__init__.py
-        black --check calc/ tests/ --exclude='/(\.git|__pycache__)/'
-        mypy calc/ tests/ --ignore-missing-imports --exclude '/(\.git|__pycache__)/'
+        flake8 src/ tests/ --count --show-source --statistics --exclude=.git,__pycache__,*/__init__.py
+        black --check src/ tests/ --exclude='/(\.git|__pycache__)/'
+        mypy src/ tests/ --ignore-missing-imports --exclude '/(\.git|__pycache__)/'
 
   simple-deploy:
     needs: quality-checks
@@ -55,4 +55,4 @@ jobs:
 
         echo "Calculator installed successfully!"
         echo "Test usage:"
-        python -c "from calc.calculator import add, subtract; print(f'2+3={add(2,3)}, 5-2={subtract(5,2)}')"
+        python -c "from src.calculator import add, subtract; print(f'2+3={add(2,3)}, 5-2={subtract(5,2)}')"
